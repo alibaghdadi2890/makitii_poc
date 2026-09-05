@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { categories } from '../data/categories'
 import { ads } from '../data/ads'
 import { useLang } from '../i18n/LanguageContext'
+import { useFavorites } from '../hooks/useFavorites'
 import { Icon } from './Icon'
 
 function Logo({ variant }: { variant?: 'footer' }) {
@@ -30,19 +31,23 @@ function LanguageToggle() {
   )
 }
 
-function TopBar() {
-  const { t, pick } = useLang()
+/** Shared by the top bar and the condensed sticky header. */
+function useSearchSubmit() {
   const navigate = useNavigate()
-  const [query, setQuery] = useState('')
-  const [cat, setCat] = useState('')
-
-  const submit = (event: React.FormEvent) => {
-    event.preventDefault()
+  return (query: string, cat = '') => {
     const params = new URLSearchParams()
     if (query.trim()) params.set('q', query.trim())
     if (cat) params.set('cat', cat)
     navigate(`/search?${params.toString()}`)
   }
+}
+
+function TopBar() {
+  const { t, pick } = useLang()
+  const { ids } = useFavorites()
+  const submitSearch = useSearchSubmit()
+  const [query, setQuery] = useState('')
+  const [cat, setCat] = useState('')
 
   const tagline = t('topbar.tagline')
   const [before, after] = tagline.split(/10[\s,.]?000/)
@@ -56,7 +61,14 @@ function TopBar() {
           {after}
         </p>
 
-        <form className="topbar__search" role="search" onSubmit={submit}>
+        <form
+          className="topbar__search"
+          role="search"
+          onSubmit={(e) => {
+            e.preventDefault()
+            submitSearch(query, cat)
+          }}
+        >
           <input
             type="search"
             value={query}
@@ -80,6 +92,12 @@ function TopBar() {
 
         <div className="topbar__auth">
           <LanguageToggle />
+          <span className="topbar__divider" />
+          <Link to="/favorites" className="fav-link">
+            <Icon name="heart" size={16} />
+            {t('nav.favorites')}
+            {ids.length > 0 && <span className="fav-link__count">{ids.length}</span>}
+          </Link>
           <span className="topbar__divider" />
           <Link to="/login">
             <Icon name="user" size={16} />
@@ -120,73 +138,190 @@ function MegaMenu({ onNavigate }: { onNavigate: () => void }) {
   )
 }
 
-function Header() {
+function Drawer({ onClose }: { onClose: () => void }) {
   const { t, pick } = useLang()
-  const [open, setOpen] = useState(false)
-  const wrapper = useRef<HTMLDivElement>(null)
-  const location = useLocation()
-
-  useEffect(() => setOpen(false), [location.pathname, location.search])
+  const panel = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!open) return
-    const onClick = (e: MouseEvent) => {
-      if (wrapper.current && !wrapper.current.contains(e.target as Node)) setOpen(false)
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    panel.current?.focus()
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = previous
+      document.removeEventListener('keydown', onKey)
     }
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+  }, [onClose])
+
+  return (
+    <>
+      <div className="drawer-backdrop" onClick={onClose} />
+      <div
+        className="drawer"
+        ref={panel}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('nav.allCategories')}
+      >
+        <div className="drawer__head">
+          <Logo />
+          <button type="button" className="drawer__close" aria-label={t('nav.close')} onClick={onClose}>
+            <Icon name="close" size={17} />
+          </button>
+        </div>
+
+        <div className="drawer__body">
+          {categories.map((category) => (
+            <details key={category.id} className="drawer__group">
+              <summary>
+                <Icon name={category.icon} size={17} />
+                {pick(category)}
+                <Icon name="chevron" size={15} className="drawer__chevron" />
+              </summary>
+              <ul>
+                <li>
+                  <Link to={`/c/${category.slug}`} onClick={onClose}>
+                    {t('category.all')}
+                  </Link>
+                </li>
+                {category.children.map((sub) => (
+                  <li key={sub.id}>
+                    <Link to={`/c/${category.slug}?sub=${sub.id}`} onClick={onClose}>
+                      {pick(sub)}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ))}
+        </div>
+
+        <div className="drawer__foot">
+          <Link to="/post" className="btn btn--green btn--block" onClick={onClose}>
+            <Icon name="plus" size={16} />
+            {t('nav.postAd')}
+          </Link>
+          <Link to="/login" className="btn btn--outline btn--block" onClick={onClose}>
+            {t('topbar.signIn')}
+          </Link>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function Header() {
+  const { t, pick } = useLang()
+  const [megaOpen, setMegaOpen] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [stuck, setStuck] = useState(false)
+  const [query, setQuery] = useState('')
+  const wrapper = useRef<HTMLDivElement>(null)
+  const location = useLocation()
+  const submitSearch = useSearchSubmit()
+
+  useEffect(() => {
+    setMegaOpen(false)
+    setDrawerOpen(false)
+  }, [location.pathname, location.search])
+
+  // The condensed header takes over once the top bar has scrolled out of view.
+  useEffect(() => {
+    const onScroll = () => setStuck(window.scrollY > 70)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    if (!megaOpen) return
+    const onClick = (e: MouseEvent) => {
+      if (wrapper.current && !wrapper.current.contains(e.target as Node)) setMegaOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMegaOpen(false)
     document.addEventListener('mousedown', onClick)
     document.addEventListener('keydown', onKey)
     return () => {
       document.removeEventListener('mousedown', onClick)
       document.removeEventListener('keydown', onKey)
     }
-  }, [open])
+  }, [megaOpen])
 
   const highlighted = ['vehicles', 'fashion', 'bazzar', 'madinah']
-    .map((id) => categories.find((c) => c.id === id)!)
-    .filter(Boolean)
+    .map((id) => categories.find((c) => c.id === id))
+    .filter((c): c is NonNullable<typeof c> => Boolean(c))
 
   return (
-    <header className="header">
-      <div className="container header__inner">
-        <Logo />
+    <>
+      <header className={`header ${stuck ? 'is-stuck' : ''}`}>
+        <div className="container header__inner">
+          <Logo />
 
-        <nav className="mainnav" aria-label="Primary">
-          <div ref={wrapper}>
+          <nav className="mainnav" aria-label="Primary">
+            <div ref={wrapper}>
+              <button
+                type="button"
+                className="mainnav__trigger"
+                aria-expanded={megaOpen}
+                onClick={() => setMegaOpen((v) => !v)}
+              >
+                {t('nav.allCategories')}
+                <Icon name="chevron" size={15} />
+              </button>
+              {megaOpen && <MegaMenu onNavigate={() => setMegaOpen(false)} />}
+            </div>
+
+            {highlighted.map((category) => (
+              <NavLink
+                key={category.id}
+                to={`/c/${category.slug}`}
+                className={({ isActive }) => (isActive ? 'is-active' : '')}
+              >
+                {pick(category)}
+              </NavLink>
+            ))}
+          </nav>
+
+          <form
+            className="header__search"
+            role="search"
+            onSubmit={(e) => {
+              e.preventDefault()
+              submitSearch(query)
+            }}
+          >
+            <Icon name="search" size={16} />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t('topbar.searchPlaceholder')}
+              aria-label={t('topbar.searchPlaceholder')}
+            />
+          </form>
+
+          <div className="header__actions">
+            <Link to="/post" className="btn btn--green">
+              <Icon name="plus" size={16} />
+              {t('nav.postAd')}
+            </Link>
             <button
               type="button"
-              className="mainnav__trigger"
-              aria-expanded={open}
-              onClick={() => setOpen((v) => !v)}
+              className="burger"
+              aria-label={t('nav.menu')}
+              aria-expanded={drawerOpen}
+              onClick={() => setDrawerOpen(true)}
             >
-              {t('nav.allCategories')}
-              <Icon name="chevron" size={15} />
+              <Icon name="menu" size={20} />
             </button>
-            {open && <MegaMenu onNavigate={() => setOpen(false)} />}
           </div>
-
-          {highlighted.map((category) => (
-            <NavLink
-              key={category.id}
-              to={`/c/${category.slug}`}
-              className={({ isActive }) => (isActive ? 'is-active' : '')}
-            >
-              {pick(category)}
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="header__actions">
-          <Link to="/post" className="btn btn--green">
-            <Icon name="plus" size={16} />
-            {t('nav.postAd')}
-          </Link>
-          <button type="button" className="burger" aria-label={t('nav.menu')} onClick={() => setOpen((v) => !v)}>
-            <Icon name="menu" size={20} />
-          </button>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {drawerOpen && <Drawer onClose={() => setDrawerOpen(false)} />}
+    </>
   )
 }
 
@@ -198,8 +333,6 @@ function Footer() {
     ['/contact', t('footer.contactUs')],
     ['/login', t('footer.login')],
     ['/register', t('footer.signUp')],
-  ]
-  const helpLinks: [string, string][] = [
     ['/help', t('footer.help')],
     ['/safety', t('footer.safety')],
     ['/terms', t('footer.terms')],
@@ -264,14 +397,6 @@ function Footer() {
             <h4>{t('footer.quickLinks')}</h4>
             <ul className="footer__links">
               {quickLinks.map(([to, label]) => (
-                <li key={to}>
-                  <Link to={to}>
-                    <Icon name="arrow" size={13} />
-                    {label}
-                  </Link>
-                </li>
-              ))}
-              {helpLinks.map(([to, label]) => (
                 <li key={to}>
                   <Link to={to}>
                     <Icon name="arrow" size={13} />

@@ -1,0 +1,540 @@
+/* =========================================================================
+   Phase 2 — refinements layered on the clone.
+   Behaviour and polish the reference build lacks: a sticky condensed header,
+   a real mobile drawer, filter chips, loading skeletons, and states that
+   respond to focus and hover.
+   ========================================================================= */
+
+:root {
+  /* A darker green passes AA on white text; the original sat just under it. */
+  --green: #2e7d05;
+  --green-dark: #235f04;
+  --ink-soft: #4a4f55;
+  --muted: #767b82;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* ------------------------------------------------------------ typography */
+
+h1 {
+  letter-spacing: -0.022em;
+}
+
+h2,
+h3 {
+  letter-spacing: -0.012em;
+}
+
+.section__head h2 {
+  position: relative;
+  padding-left: 14px;
+}
+
+.section__head h2::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 20px;
+  border-radius: 2px;
+  background: var(--green);
+}
+
+/* --------------------------------------------------------- sticky header */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 70;
+  transition: box-shadow 0.25s var(--ease), min-height 0.25s var(--ease);
+}
+
+.header.is-stuck {
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.09);
+}
+
+.header.is-stuck .header__inner {
+  min-height: 68px;
+}
+
+.header.is-stuck .logo {
+  font-size: 23px;
+}
+
+.header.is-stuck .logo__mark {
+  width: 36px;
+  height: 36px;
+  font-size: 19px;
+}
+
+/* The compact search only appears once the top bar has scrolled away. */
+.header__search {
+  display: none;
+  margin-left: auto;
+  position: relative;
+}
+
+.header.is-stuck .header__search {
+  display: block;
+}
+
+.header__search input {
+  width: 230px;
+  height: 38px;
+  padding: 0 14px 0 36px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--page);
+  transition: width 0.25s var(--ease), border-color 0.18s ease;
+}
+
+.header__search input:focus {
+  width: 280px;
+  outline: none;
+  border-color: var(--green);
+  background: #fff;
+}
+
+.header__search svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------- mobile drawer */
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(0, 0, 0, 0.45);
+  animation: fade 0.2s var(--ease);
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 95;
+  width: min(340px, 86vw);
+  background: #fff;
+  overflow-y: auto;
+  animation: slide-in 0.28s var(--ease);
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  background: #fff;
+}
+
+.drawer__close {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #fff;
+}
+
+.drawer__body {
+  padding: 12px 0 24px;
+}
+
+.drawer__group summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  list-style: none;
+}
+
+.drawer__group summary::-webkit-details-marker {
+  display: none;
+}
+
+.drawer__group summary svg:first-child {
+  color: var(--green);
+}
+
+.drawer__group summary .drawer__chevron {
+  margin-left: auto;
+  color: var(--muted);
+  transition: transform 0.2s var(--ease);
+}
+
+.drawer__group[open] summary .drawer__chevron {
+  transform: rotate(180deg);
+}
+
+.drawer__group li a {
+  display: block;
+  padding: 9px 18px 9px 46px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+
+.drawer__group li a:hover,
+.drawer__group li a:focus-visible {
+  background: var(--green-light);
+  color: var(--green-dark);
+}
+
+.drawer__foot {
+  margin-top: auto;
+  padding: 18px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+/* ------------------------------------------------------------ card polish */
+
+.card {
+  transition: transform 0.22s var(--ease), box-shadow 0.22s var(--ease), border-color 0.22s var(--ease);
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.1);
+}
+
+.card:focus-within {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(46, 125, 5, 0.16);
+}
+
+.card__title a::after {
+  /* Makes the whole card clickable without nesting interactive elements. */
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.card__fav,
+.card__badge {
+  z-index: 2;
+}
+
+.card__media .thumb {
+  transition: transform 0.4s var(--ease);
+}
+
+.card:hover .thumb {
+  transform: scale(1.04);
+}
+
+.card__fav {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.2s var(--ease), transform 0.2s var(--ease), color 0.18s ease;
+}
+
+.card:hover .card__fav,
+.card__fav:focus-visible,
+.card__fav[aria-pressed='true'] {
+  opacity: 1;
+  transform: none;
+}
+
+@media (hover: none) {
+  .card__fav {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.card__tags {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  display: flex;
+  gap: 6px;
+  z-index: 2;
+}
+
+.tag-chip {
+  padding: 3px 9px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 500;
+  box-shadow: var(--shadow-sm);
+}
+
+.tag-chip--new {
+  background: var(--green);
+  color: #fff;
+}
+
+/* --------------------------------------------------------------- skeleton */
+
+.skeleton {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  overflow: hidden;
+}
+
+.skeleton__media {
+  aspect-ratio: 1 / 0.72;
+}
+
+.skeleton__line {
+  height: 11px;
+  margin: 10px 14px;
+  border-radius: 3px;
+}
+
+.skeleton__line--short {
+  width: 45%;
+}
+
+.skeleton__media,
+.skeleton__line {
+  background: linear-gradient(90deg, #eee 25%, #f6f6f6 37%, #eee 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+/* ---------------------------------------------------------- filter chips */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+.chip button {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--line-soft);
+  color: var(--muted);
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.chip button:hover {
+  background: var(--price);
+  color: #fff;
+}
+
+.chip--clear {
+  border-style: dashed;
+  color: var(--green);
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------- filters, sticky */
+
+@media (min-width: 1101px) {
+  .layout-2col > aside {
+    position: sticky;
+    top: 92px;
+  }
+
+  .ad-layout > aside {
+    position: sticky;
+    top: 92px;
+  }
+}
+
+.panel--filters .field:last-of-type {
+  margin-bottom: 20px;
+}
+
+/* -------------------------------------------------------- favourites nav */
+
+.fav-link {
+  position: relative;
+}
+
+.fav-link__count {
+  position: absolute;
+  top: -7px;
+  right: -12px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--price);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------ toast */
+
+.toast-stack {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 120;
+  display: grid;
+  gap: 10px;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: #fff;
+  font-size: 13px;
+  box-shadow: var(--shadow-lg);
+  animation: toast-in 0.25s var(--ease);
+}
+
+.toast svg {
+  color: var(--yellow);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* ------------------------------------------------------------ ad details */
+
+.ad-gallery__nav {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  pointer-events: none;
+}
+
+.ad-gallery__nav button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  pointer-events: auto;
+  transition: transform 0.18s var(--ease);
+}
+
+.ad-gallery__nav button:hover {
+  transform: scale(1.08);
+}
+
+.ad-gallery__nav button:first-child svg {
+  transform: rotate(180deg);
+}
+
+/* ------------------------------------------------------------- utilities */
+
+.section--tight + .section--tight {
+  padding-top: 0;
+}
+
+.stack-sm {
+  display: grid;
+  gap: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Nav labels must not wrap when the header condenses. */
+.mainnav a,
+.mainnav button {
+  white-space: nowrap;
+}
+
+/* English labels are longer than the French ones — keep the top bar on one line. */
+.topbar__auth a {
+  white-space: nowrap;
+}
+
+.topbar__auth {
+  flex: none;
+}
+
+/* Category tiles stay two-up on phones — one per row wastes the screen. */
+@media (max-width: 460px) {
+  .cat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .cat-tile {
+    padding: 18px 10px;
+  }
+}

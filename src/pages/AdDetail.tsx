@@ -7,15 +7,28 @@ import { AdCard } from '../components/AdCard'
 import { Icon } from '../components/Icon'
 import { Thumb } from '../components/Thumb'
 import { useFavorites } from '../hooks/useFavorites'
+import { useRecentlyViewed } from '../hooks/useRecentlyViewed'
+import { useToast } from '../components/Toast'
+
+const GALLERY_LENGTH = 4
+
+/** Stable numeric reference derived from the slug, so it reads like a real ID. */
+function reference(slug: string) {
+  let h = 0
+  for (let i = 0; i < slug.length; i += 1) h = (h * 33 + slug.charCodeAt(i)) % 1_000_000
+  return String(h).padStart(6, '0')
+}
 
 export function AdDetail() {
   const { slug } = useParams()
   const { t, pick, formatPrice, formatDate } = useLang()
   const { isFavorite, toggle } = useFavorites()
+  const toast = useToast()
   const [variant, setVariant] = useState(0)
   const [phoneShown, setPhoneShown] = useState(false)
 
   const ad = adBySlug(slug ?? '')
+  const recentIds = useRecentlyViewed(ad?.id)
 
   if (!ad) {
     return (
@@ -40,9 +53,23 @@ export function AdDetail() {
   const sub = subCategoryById(ad.categoryId, ad.subCategoryId)
   const copy = pick(ad)
   const saved = isFavorite(ad.id)
+
   const similar = ads
     .filter((a) => a.id !== ad.id && (a.subCategoryId === ad.subCategoryId || a.categoryId === ad.categoryId))
     .slice(0, 3)
+
+  const recent = recentIds
+    .map((id) => ads.find((a) => a.id === id))
+    .filter((a): a is NonNullable<typeof a> => Boolean(a))
+    .slice(0, 4)
+
+  const step = (delta: number) =>
+    setVariant((v) => (v + delta + GALLERY_LENGTH) % GALLERY_LENGTH)
+
+  const onToggleFavorite = () => {
+    toggle(ad.id)
+    toast(saved ? t('toast.removed') : t('toast.saved'))
+  }
 
   return (
     <div className="page">
@@ -62,16 +89,25 @@ export function AdDetail() {
         <div className="ad-layout">
           <div>
             <div className="panel" style={{ marginBottom: 22 }}>
-              <div className="gallery__main">
+              <div className="gallery__main" style={{ position: 'relative' }}>
                 <Thumb seed={ad.slug} category={category} variant={variant} ratio={0.6} />
+                <div className="ad-gallery__nav">
+                  <button type="button" aria-label={t('ad.previousImage')} onClick={() => step(-1)}>
+                    <Icon name="arrow" size={17} />
+                  </button>
+                  <button type="button" aria-label={t('ad.nextImage')} onClick={() => step(1)}>
+                    <Icon name="arrow" size={17} />
+                  </button>
+                </div>
               </div>
+
               <div className="gallery__thumbs">
-                {[0, 1, 2, 3].map((i) => (
+                {Array.from({ length: GALLERY_LENGTH }).map((_, i) => (
                   <button
                     key={i}
                     type="button"
                     aria-current={variant === i}
-                    aria-label={`${copy.title} — ${i + 1}`}
+                    aria-label={`${copy.title} — ${i + 1}/${GALLERY_LENGTH}`}
                     onClick={() => setVariant(i)}
                   >
                     <Thumb seed={ad.slug} category={category} variant={i} ratio={0.72} />
@@ -97,7 +133,7 @@ export function AdDetail() {
                 </span>
                 <span>
                   <Icon name="tag" size={14} />
-                  {t('ad.reference')} #{ad.id.slice(0, 8).toUpperCase()}
+                  {t('ad.reference')} #{reference(ad.slug)}
                 </span>
                 <span className="pill">{t(`condition.${ad.condition}`)}</span>
                 {ad.negotiable && ad.priceGnf > 0 && <span className="pill">{t('card.negotiable')}</span>}
@@ -120,12 +156,12 @@ export function AdDetail() {
                 </>
               )}
 
-              <div style={{ display: 'flex', gap: 12, marginTop: 22 }}>
+              <div style={{ display: 'flex', gap: 12, marginTop: 22, flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   className="btn btn--outline"
                   aria-pressed={saved}
-                  onClick={() => toggle(ad.id)}
+                  onClick={onToggleFavorite}
                 >
                   <Icon name="heart" size={15} filled={saved} />
                   {saved ? t('card.saved') : t('card.save')}
@@ -133,6 +169,9 @@ export function AdDetail() {
                 <button type="button" className="btn btn--outline">
                   <Icon name="arrow" size={15} />
                   {t('ad.share')}
+                </button>
+                <button type="button" className="btn btn--outline" style={{ marginLeft: 'auto' }}>
+                  {t('ad.report')}
                 </button>
               </div>
             </div>
@@ -173,10 +212,7 @@ export function AdDetail() {
                 {t('ad.message')}
               </button>
 
-              <div className="demo-note">
-                <Icon name="shield" size={14} />
-                {t('ad.demoNotice')}
-              </div>
+              <div className="demo-note">{t('ad.demoNotice')}</div>
             </div>
 
             <div className="notice">
@@ -199,6 +235,19 @@ export function AdDetail() {
             </div>
             <div className="grid grid--3">
               {similar.map((item) => (
+                <AdCard key={item.id} ad={item} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {recent.length > 0 && (
+          <section style={{ marginTop: 44 }}>
+            <div className="section__head">
+              <h2 style={{ fontSize: 20 }}>{t('ad.recentlyViewed')}</h2>
+            </div>
+            <div className="grid">
+              {recent.map((item) => (
                 <AdCard key={item.id} ad={item} />
               ))}
             </div>
