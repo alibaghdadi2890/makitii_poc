@@ -1,0 +1,29 @@
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { LanguageProvider } from './i18n/LanguageContext'
+import { Layout } from './components/Layout'
+import { Home } from './pages/Home'
+import { Category } from './pages/Category'
+import { AdDetail } from './pages/AdDetail'
+import { PostAd } from './pages/PostAd'
+import { Auth } from './pages/Auth'
+
+export default function App() {
+  return (
+    <LanguageProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/c/:slug" element={<Category />} />
+            <Route path="/search" element={<Category mode="search" />} />
+            <Route path="/ad/:slug" element={<AdDetail />} />
+            <Route path="/post" element={<PostAd />} />
+            <Route path="/login" element={<Auth mode="login" />} />
+            <Route path="/register" element={<Auth mode="register" />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </LanguageProvider>
+  )
+}
