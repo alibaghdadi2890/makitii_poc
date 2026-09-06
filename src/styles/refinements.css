@@ -538,3 +538,239 @@ h3 {
     padding: 18px 10px;
   }
 }
+
+/* -------------------------------------------------------- photo uploads */
+
+.dropzone {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 34px 20px;
+  border: 2px dashed var(--line);
+  border-radius: var(--radius-lg);
+  background: #fafafa;
+  color: var(--muted);
+  text-align: center;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.dropzone.is-dragging {
+  border-color: var(--green);
+  background: var(--green-light);
+  color: var(--green-dark);
+}
+
+.dropzone.is-invalid {
+  border-color: var(--price);
+}
+
+.dropzone__trigger {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--green);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dropzone__trigger:disabled {
+  color: var(--muted);
+  text-decoration: none;
+  cursor: not-allowed;
+}
+
+.dropzone__count {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.photo-preview {
+  position: relative;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #fff;
+}
+
+.photo-preview img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-preview figcaption {
+  padding: 6px 10px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.photo-preview__cover {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 9px;
+  border-radius: 3px;
+  background: var(--green);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.photo-preview__actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.photo-preview__actions button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  transition: background 0.16s ease;
+}
+
+.photo-preview__actions button:hover {
+  background: var(--price);
+}
+
+.photo-preview__actions button:first-child:hover {
+  background: var(--green);
+}
+
+.success__photos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.success__photos img {
+  width: 86px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+}
+
+/* Real listing photos fill the same box the generated artwork used. */
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* The generated artwork sits under every photo, so a card is never blank
+   while an image is still loading. */
+.thumb__under {
+  position: absolute;
+  inset: 0;
+  aspect-ratio: auto !important;
+}
+
+.thumb__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.35s var(--ease);
+}
+
+.thumb__photo.is-loaded {
+  opacity: 1;
+}
+
+/* ------------------------------------------------------------- credits */
+
+.photo-credit {
+  margin: 12px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.photo-credit a {
+  color: var(--green);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.credits {
+  display: grid;
+  gap: 16px;
+}
+
+.credits__group h2 {
+  font-size: 16px;
+  margin-bottom: 14px;
+}
+
+.credits__group h2 a:hover {
+  color: var(--green);
+}
+
+.credits__group ul {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.credits__group li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.credits__group img {
+  width: 84px;
+  height: 63px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  flex: none;
+}
+
+.credits__group strong {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  margin-bottom: 3px;
+}
+
+.credits__group span {
+  display: block;
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.credits__group a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--green);
+}
+
+@media (max-width: 900px) {
+  .credits__group ul {
+    grid-template-columns: 1fr;
+  }
+}

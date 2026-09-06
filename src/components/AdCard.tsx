@@ -5,7 +5,7 @@ import { useLang } from '../i18n/LanguageContext'
 import { useFavorites } from '../hooks/useFavorites'
 import { useToast } from './Toast'
 import { Icon } from './Icon'
-import { Thumb } from './Thumb'
+import { AdImage } from './AdImage'
 
 export function AdCard({ ad }: { ad: Ad }) {
   const { t, pick, formatPrice, formatDate } = useLang()
@@ -25,7 +25,7 @@ export function AdCard({ ad }: { ad: Ad }) {
   return (
     <article className="card">
       <div className="card__media">
-        <Thumb seed={ad.slug} category={category} />
+        <AdImage slug={ad.slug} category={category} alt={pick(ad).title} />
 
         {ad.featured && <span className="card__badge">{t('card.featured')}</span>}
 

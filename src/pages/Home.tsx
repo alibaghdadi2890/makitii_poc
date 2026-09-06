@@ -5,7 +5,7 @@ import type { Ad } from '../data/types'
 import { useLang } from '../i18n/LanguageContext'
 import { AdCard } from '../components/AdCard'
 import { Icon } from '../components/Icon'
-import { Thumb } from '../components/Thumb'
+import { AdImage } from '../components/AdImage'
 import type { TranslationKey } from '../i18n/translations'
 
 function Hero() {
@@ -65,7 +65,7 @@ function Hero() {
             const category = categoryById(ad.categoryId)!
             return (
               <Link key={ad.id} to={`/ad/${ad.slug}`} className="hero__card">
-                <Thumb seed={ad.slug} category={category} ratio={0.62} />
+                <AdImage slug={ad.slug} category={category} alt={pick(ad).title} ratio={0.62} eager />
                 <strong>{pick(ad).title}</strong>
                 <span>{formatPrice(ad.priceGnf)}</span>
               </Link>

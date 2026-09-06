@@ -337,6 +337,7 @@ function Footer() {
     ['/safety', t('footer.safety')],
     ['/terms', t('footer.terms')],
     ['/privacy', t('footer.privacy')],
+    ['/credits', t('footer.credits')],
   ]
 
   return (

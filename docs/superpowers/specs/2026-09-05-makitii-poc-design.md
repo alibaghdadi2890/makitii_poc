@@ -18,7 +18,12 @@ Conakry, Guinea. It mirrors the layout and information architecture of the refer
 - **Currency.** Guinean franc (GNF), formatted `45 000 000 GNF` in FR and `GNF 45,000,000` in EN.
 - **Original implementation.** The reference site runs a licensed commercial WordPress theme.
   Layout and proportions are matched by writing our own CSS and components; no theme source,
-  photography, or marketing copy is reused. Placeholder imagery is generated locally.
+  photography, or marketing copy is reused.
+- **Photography.** Listing photos are openly licensed images fetched from Openverse by
+  `scripts/fetch-photos.mjs` and committed under `public/photos`. Licences span CC0, public
+  domain, CC-BY and CC-BY-SA, so creator, licence and source are recorded per photo in
+  `src/data/photos.json` and surfaced on `/credits` and under each ad's gallery. Generated
+  artwork remains as the loading placeholder and fallback.
 
 ## Stack
 

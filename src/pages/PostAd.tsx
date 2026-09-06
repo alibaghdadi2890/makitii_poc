@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { categories, locations } from '../data/categories'
 import { useLang } from '../i18n/LanguageContext'
 import { Icon } from '../components/Icon'
+import { MAX_PHOTOS, usePhotoUploads } from '../hooks/usePhotoUploads'
 import type { TranslationKey } from '../i18n/translations'
 
 interface Draft {
@@ -14,7 +15,6 @@ interface Draft {
   negotiable: boolean
   condition: string
   location: string
-  photos: number
   name: string
   phone: string
   email: string
@@ -29,7 +29,6 @@ const empty: Draft = {
   negotiable: true,
   condition: 'used',
   location: '',
-  photos: 0,
   name: '',
   phone: '',
   email: '',
@@ -44,6 +43,19 @@ export function PostAd() {
   const [draft, setDraft] = useState<Draft>(empty)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [done, setDone] = useState(false)
+  const [dragging, setDragging] = useState(false)
+  const fileInput = useRef<HTMLInputElement>(null)
+
+  const uploadMessages = useMemo(
+    () => ({
+      type: t('post.photoInvalidType'),
+      size: t('post.photoTooLarge'),
+      limit: t('post.photoLimit'),
+    }),
+    [t],
+  )
+  const { photos, error: photoError, add, remove, makeCover, reset: resetPhotos } =
+    usePhotoUploads(uploadMessages)
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }))
@@ -61,6 +73,9 @@ export function PostAd() {
       if (draft.description.trim().length < 15) next.description = t('post.required')
       if (!draft.price) next.price = t('post.required')
       if (!draft.location) next.location = t('post.required')
+    }
+    if (index === 2) {
+      if (photos.length === 0) next.photos = t('post.photosRequired')
     }
     if (index === 3) {
       if (!draft.name.trim()) next.name = t('post.required')
@@ -91,6 +106,14 @@ export function PostAd() {
             <h2>{t('post.successTitle')}</h2>
             <p>{t('post.successBody')}</p>
 
+            {photos.length > 0 && (
+              <div className="success__photos">
+                {photos.map((photo) => (
+                  <img key={photo.id} src={photo.url} alt={photo.name} />
+                ))}
+              </div>
+            )}
+
             <div className="panel" style={{ textAlign: 'left', marginBottom: 20 }}>
               <h3>{t('post.summary')}</h3>
               <dl className="attr-table">
@@ -119,6 +142,7 @@ export function PostAd() {
                 className="btn btn--outline"
                 onClick={() => {
                   setDraft(empty)
+                  resetPhotos()
                   setStep(0)
                   setDone(false)
                 }}
@@ -277,32 +301,89 @@ export function PostAd() {
                 <span>{t('post.photos')}</span>
                 <p className="field__hint">{t('post.photosHint')}</p>
               </div>
-              <div className="photo-grid">
-                {Array.from({ length: 6 }).map((_, i) =>
-                  i < draft.photos ? (
-                    <div key={i} className="photo-slot photo-slot--filled">
-                      <Icon name="camera" size={26} />
-                      <button
-                        type="button"
-                        className="photo-slot__remove"
-                        aria-label={t('nav.close')}
-                        onClick={() => set('photos', draft.photos - 1)}
-                      >
-                        <Icon name="close" size={13} />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      key={i}
-                      type="button"
-                      className="photo-slot"
-                      onClick={() => set('photos', draft.photos + 1)}
-                    >
-                      <Icon name="plus" size={22} />
-                      {t('post.addPhoto')}
-                    </button>
-                  ),
-                )}
+
+              <div
+                className={`dropzone ${dragging ? 'is-dragging' : ''} ${
+                  errors.photos ? 'is-invalid' : ''
+                }`}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  setDragging(true)
+                }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  setDragging(false)
+                  if (e.dataTransfer.files.length) add(e.dataTransfer.files)
+                }}
+              >
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  multiple
+                  hidden
+                  onChange={(e) => {
+                    if (e.target.files?.length) add(e.target.files)
+                    e.target.value = ''
+                  }}
+                />
+                <Icon name="camera" size={30} strokeWidth={1.4} />
+                <button
+                  type="button"
+                  className="dropzone__trigger"
+                  onClick={() => fileInput.current?.click()}
+                  disabled={photos.length >= MAX_PHOTOS}
+                >
+                  {t('post.dropHint')}
+                </button>
+                <span className="field__hint">{t('post.dropFormats')}</span>
+                <span className="dropzone__count">
+                  {photos.length} {t('post.photoCount')} {MAX_PHOTOS}
+                </span>
+              </div>
+
+              {(photoError || errors.photos) && (
+                <span className="field__error" role="alert">
+                  {photoError ?? errors.photos}
+                </span>
+              )}
+
+              {photos.length > 0 && (
+                <div className="photo-grid" style={{ marginTop: 16 }}>
+                  {photos.map((photo, index) => (
+                    <figure key={photo.id} className="photo-preview">
+                      <img src={photo.url} alt={photo.name} />
+                      {index === 0 && <span className="photo-preview__cover">{t('post.cover')}</span>}
+                      <div className="photo-preview__actions">
+                        {index !== 0 && (
+                          <button
+                            type="button"
+                            title={t('post.makeCover')}
+                            aria-label={`${t('post.makeCover')} — ${photo.name}`}
+                            onClick={() => makeCover(photo.id)}
+                          >
+                            <Icon name="star" size={13} />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          title={t('post.removePhoto')}
+                          aria-label={`${t('post.removePhoto')} — ${photo.name}`}
+                          onClick={() => remove(photo.id)}
+                        >
+                          <Icon name="close" size={13} />
+                        </button>
+                      </div>
+                      <figcaption>{(photo.size / 1024).toFixed(0)} KB</figcaption>
+                    </figure>
+                  ))}
+                </div>
+              )}
+
+              <div className="demo-note" style={{ marginTop: 16 }}>
+                <Icon name="shield" size={14} />
+                {t('post.photosLocal')}
               </div>
             </div>
           )}

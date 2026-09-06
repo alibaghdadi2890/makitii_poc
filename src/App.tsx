@@ -8,6 +8,7 @@ import { AdDetail } from './pages/AdDetail'
 import { PostAd } from './pages/PostAd'
 import { Auth } from './pages/Auth'
 import { Favorites } from './pages/Favorites'
+import { Credits } from './pages/Credits'
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
               <Route path="/ad/:slug" element={<AdDetail />} />
               <Route path="/post" element={<PostAd />} />
               <Route path="/favorites" element={<Favorites />} />
+              <Route path="/credits" element={<Credits />} />
               <Route path="/login" element={<Auth mode="login" />} />
               <Route path="/register" element={<Auth mode="register" />} />
               <Route path="*" element={<Navigate to="/" replace />} />

@@ -5,12 +5,13 @@ import { categoryById, subCategoryById } from '../data/categories'
 import { useLang } from '../i18n/LanguageContext'
 import { AdCard } from '../components/AdCard'
 import { Icon } from '../components/Icon'
-import { Thumb } from '../components/Thumb'
+import { AdImage, photoCount } from '../components/AdImage'
+import { creditsFor } from '../data/photos'
 import { useFavorites } from '../hooks/useFavorites'
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed'
 import { useToast } from '../components/Toast'
 
-const GALLERY_LENGTH = 4
+const FALLBACK_GALLERY = 4
 
 /** Stable numeric reference derived from the slug, so it reads like a real ID. */
 function reference(slug: string) {
@@ -63,8 +64,11 @@ export function AdDetail() {
     .filter((a): a is NonNullable<typeof a> => Boolean(a))
     .slice(0, 4)
 
+  const credits = creditsFor(ad.slug)
+  const credit = credits[variant % (credits.length || 1)]
+  const galleryLength = photoCount(ad.slug) || FALLBACK_GALLERY
   const step = (delta: number) =>
-    setVariant((v) => (v + delta + GALLERY_LENGTH) % GALLERY_LENGTH)
+    setVariant((v) => (v + delta + galleryLength) % galleryLength)
 
   const onToggleFavorite = () => {
     toggle(ad.id)
@@ -90,7 +94,14 @@ export function AdDetail() {
           <div>
             <div className="panel" style={{ marginBottom: 22 }}>
               <div className="gallery__main" style={{ position: 'relative' }}>
-                <Thumb seed={ad.slug} category={category} variant={variant} ratio={0.6} />
+                <AdImage
+                  slug={ad.slug}
+                  category={category}
+                  alt={copy.title}
+                  index={variant}
+                  ratio={0.6}
+                  eager
+                />
                 <div className="ad-gallery__nav">
                   <button type="button" aria-label={t('ad.previousImage')} onClick={() => step(-1)}>
                     <Icon name="arrow" size={17} />
@@ -102,18 +113,28 @@ export function AdDetail() {
               </div>
 
               <div className="gallery__thumbs">
-                {Array.from({ length: GALLERY_LENGTH }).map((_, i) => (
+                {Array.from({ length: galleryLength }).map((_, i) => (
                   <button
                     key={i}
                     type="button"
                     aria-current={variant === i}
-                    aria-label={`${copy.title} — ${i + 1}/${GALLERY_LENGTH}`}
+                    aria-label={`${copy.title} — ${i + 1}/${galleryLength}`}
                     onClick={() => setVariant(i)}
                   >
-                    <Thumb seed={ad.slug} category={category} variant={i} ratio={0.72} />
+                    <AdImage slug={ad.slug} category={category} alt={copy.title} index={i} ratio={0.72} />
                   </button>
                 ))}
               </div>
+
+              {credit && (
+                <p className="photo-credit">
+                  {t('ad.photoCredit')}: {credit.title ?? credit.file} — {t('credits.by')}{' '}
+                  {credit.creator ?? t('credits.unknownAuthor')} ({credit.license.toUpperCase()}) ·{' '}
+                  <a href={credit.source} target="_blank" rel="noreferrer noopener">
+                    {t('credits.source')}
+                  </a>
+                </p>
+              )}
             </div>
 
             <div className="panel">
