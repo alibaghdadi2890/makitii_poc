@@ -3,3 +3,6 @@ dist
 .playwright-mcp
 *.local
 scripts/.cache
+server/uploads/
+server/makitii.db
+server/makitii.db-*

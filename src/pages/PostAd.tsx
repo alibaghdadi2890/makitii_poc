@@ -1,9 +1,12 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { categories, locations } from '../data/categories'
+import { ApiError, api } from '../api/client'
+import { locations, useCatalog } from '../api/CatalogContext'
+import { useAuth } from '../auth/AuthContext'
 import { useLang } from '../i18n/LanguageContext'
 import { Icon } from '../components/Icon'
 import { MAX_PHOTOS, usePhotoUploads } from '../hooks/usePhotoUploads'
+import type { ApiAd } from '../api/types'
 import type { TranslationKey } from '../i18n/translations'
 
 interface Draft {
@@ -15,9 +18,6 @@ interface Draft {
   negotiable: boolean
   condition: string
   location: string
-  name: string
-  phone: string
-  email: string
 }
 
 const empty: Draft = {
@@ -29,20 +29,19 @@ const empty: Draft = {
   negotiable: true,
   condition: 'used',
   location: '',
-  name: '',
-  phone: '',
-  email: '',
 }
-
-const PHONE_RE = /^(\+?224)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}[\s-]?\d{2}$/
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export function PostAd() {
   const { t, pick, formatPrice } = useLang()
+  const { categories } = useCatalog()
+  const { user, loading: authLoading } = useAuth()
+
   const [step, setStep] = useState(0)
   const [draft, setDraft] = useState<Draft>(empty)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [done, setDone] = useState(false)
+  const [published, setPublished] = useState<ApiAd | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
 
@@ -74,28 +73,87 @@ export function PostAd() {
       if (!draft.price) next.price = t('post.required')
       if (!draft.location) next.location = t('post.required')
     }
-    if (index === 2) {
-      if (photos.length === 0) next.photos = t('post.photosRequired')
-    }
-    if (index === 3) {
-      if (!draft.name.trim()) next.name = t('post.required')
-      if (!PHONE_RE.test(draft.phone.trim())) next.phone = t('post.invalidPhone')
-      if (draft.email && !EMAIL_RE.test(draft.email.trim())) next.email = t('post.invalidEmail')
-    }
+    if (index === 2 && photos.length === 0) next.photos = t('post.photosRequired')
     setErrors(next)
     return Object.keys(next).length === 0
   }
 
+  const submit = async () => {
+    setSubmitError(null)
+    setSubmitting(true)
+    try {
+      const form = new FormData()
+      form.set('title', draft.title.trim())
+      form.set('description', draft.description.trim())
+      form.set('categoryId', draft.categoryId)
+      form.set('subCategoryId', draft.subCategoryId)
+      form.set('priceGnf', String(Number(draft.price) || 0))
+      form.set('condition', draft.condition)
+      form.set('location', draft.location)
+      form.set('negotiable', String(draft.negotiable))
+      // Order matters: the first file becomes the cover, which is what the
+      // "set as cover" control in the previous step rearranges.
+      photos.forEach((photo) => form.append('photos', photo.file, photo.name))
+
+      const { ad } = await api.createAd(form)
+      setPublished(ad)
+    } catch (err) {
+      setSubmitError(
+        err instanceof ApiError && err.fields
+          ? Object.entries(err.fields)
+              .map(([field, reason]) => `${field}: ${reason}`)
+              .join(', ')
+          : t('post.errorGeneric'),
+      )
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const next = () => {
     if (!validate(step)) return
-    if (step === 3) {
-      setDone(true)
-      return
-    }
+    if (step === 3) return void submit()
     setStep((s) => s + 1)
   }
 
-  if (done) {
+  if (authLoading) {
+    return (
+      <div className="page">
+        <div className="container" style={{ maxWidth: 760 }}>
+          <div className="panel">
+            <div className="skeleton__line" />
+            <div className="skeleton__line skeleton__line--short" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="page">
+        <div className="container" style={{ maxWidth: 620 }}>
+          <div className="empty">
+            <i>
+              <Icon name="user" size={24} />
+            </i>
+            <h3>{t('post.loginRequired')}</h3>
+            <p>{t('post.loginRequiredBody')}</p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <Link to="/login" className="btn btn--green">
+                {t('topbar.signIn')}
+              </Link>
+              <Link to="/register" className="btn btn--outline">
+                {t('topbar.register')}
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (published) {
     return (
       <div className="page">
         <div className="container">
@@ -103,13 +161,13 @@ export function PostAd() {
             <i>
               <Icon name="check" size={30} strokeWidth={2.4} />
             </i>
-            <h2>{t('post.successTitle')}</h2>
-            <p>{t('post.successBody')}</p>
+            <h2>{t('post.publishedTitle')}</h2>
+            <p>{t('post.publishedBody')}</p>
 
-            {photos.length > 0 && (
+            {published.photos.length > 0 && (
               <div className="success__photos">
-                {photos.map((photo) => (
-                  <img key={photo.id} src={photo.url} alt={photo.name} />
+                {published.photos.map((photo) => (
+                  <img key={photo.id} src={photo.url} alt="" />
                 ))}
               </div>
             )}
@@ -119,11 +177,11 @@ export function PostAd() {
               <dl className="attr-table">
                 <div>
                   <dt>{t('post.adTitle')}</dt>
-                  <dd>{draft.title}</dd>
+                  <dd>{pick(published).title}</dd>
                 </div>
                 <div>
                   <dt>{t('post.price')}</dt>
-                  <dd>{formatPrice(Number(draft.price) || 0)}</dd>
+                  <dd>{formatPrice(published.priceGnf)}</dd>
                 </div>
                 <div>
                   <dt>{t('post.chooseCategory')}</dt>
@@ -131,12 +189,15 @@ export function PostAd() {
                 </div>
                 <div>
                   <dt>{t('post.locationLabel')}</dt>
-                  <dd>{draft.location}</dd>
+                  <dd>{published.location}</dd>
                 </div>
               </dl>
             </div>
 
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Link to={`/ad/${published.slug}`} className="btn btn--green">
+                {t('post.viewAd')}
+              </Link>
               <button
                 type="button"
                 className="btn btn--outline"
@@ -144,14 +205,11 @@ export function PostAd() {
                   setDraft(empty)
                   resetPhotos()
                   setStep(0)
-                  setDone(false)
+                  setPublished(null)
                 }}
               >
                 {t('post.successAgain')}
               </button>
-              <Link to="/" className="btn btn--green">
-                {t('ad.backHome')}
-              </Link>
             </div>
           </div>
         </div>
@@ -380,43 +438,31 @@ export function PostAd() {
                   ))}
                 </div>
               )}
-
-              <div className="demo-note" style={{ marginTop: 16 }}>
-                <Icon name="shield" size={14} />
-                {t('post.photosLocal')}
-              </div>
             </div>
           )}
 
           {step === 3 && (
-            <div className="form-grid">
-              <div className={`field ${errors.name ? 'field--error' : ''}`}>
-                <label htmlFor="p-name">{t('post.name')}</label>
-                <input id="p-name" value={draft.name} onChange={(e) => set('name', e.target.value)} />
-                {errors.name && <span className="field__error">{errors.name}</span>}
+            <div>
+              <div className="field">
+                <span>{t('post.step4')}</span>
+                <p className="field__hint">{t('post.contactFromAccount')}</p>
               </div>
+              <dl className="attr-table">
+                <div>
+                  <dt>{t('post.name')}</dt>
+                  <dd>{user.fullName}</dd>
+                </div>
+                <div>
+                  <dt>{user.phone ? t('post.phone') : t('post.email')}</dt>
+                  <dd>{user.phone ? `+224 ${user.phone}` : user.email}</dd>
+                </div>
+              </dl>
 
-              <div className={`field ${errors.phone ? 'field--error' : ''}`}>
-                <label htmlFor="p-phone">{t('post.phone')}</label>
-                <input
-                  id="p-phone"
-                  value={draft.phone}
-                  placeholder="+224 6XX XX XX XX"
-                  onChange={(e) => set('phone', e.target.value)}
-                />
-                {errors.phone && <span className="field__error">{errors.phone}</span>}
-              </div>
-
-              <div className={`field field--full ${errors.email ? 'field--error' : ''}`}>
-                <label htmlFor="p-email">{t('post.email')}</label>
-                <input
-                  id="p-email"
-                  type="email"
-                  value={draft.email}
-                  onChange={(e) => set('email', e.target.value)}
-                />
-                {errors.email && <span className="field__error">{errors.email}</span>}
-              </div>
+              {submitError && (
+                <span className="field__error" role="alert" style={{ marginTop: 14 }}>
+                  {submitError}
+                </span>
+              )}
             </div>
           )}
 
@@ -424,13 +470,13 @@ export function PostAd() {
             <button
               type="button"
               className="btn btn--outline"
-              disabled={step === 0}
+              disabled={step === 0 || submitting}
               onClick={() => setStep((s) => Math.max(0, s - 1))}
             >
               {t('post.back')}
             </button>
-            <button type="button" className="btn btn--green" onClick={next}>
-              {step === 3 ? t('post.submit') : t('post.next')}
+            <button type="button" className="btn btn--green" onClick={next} disabled={submitting}>
+              {submitting ? t('post.submitting') : step === 3 ? t('post.submit') : t('post.next')}
             </button>
           </div>
         </div>

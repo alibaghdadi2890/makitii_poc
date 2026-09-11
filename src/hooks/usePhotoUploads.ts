@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 export interface UploadedPhoto {
   id: string
+  /** The original File, sent as-is in the multipart request. */
+  file: File
   url: string
   name: string
   size: number
@@ -20,9 +22,10 @@ interface Messages {
 }
 
 /**
- * Client-side photo handling for the post-ad form. Files never leave the
- * browser — each one becomes an object URL for preview, revoked when it is
- * removed or the form unmounts so blobs don't leak.
+ * Photo handling for the post-ad form: validation, previews and ordering. Each
+ * file becomes an object URL for preview, revoked when it is removed or the
+ * form unmounts so blobs don't leak. The File itself is kept so the form can
+ * upload it once the listing is submitted.
  */
 export function usePhotoUploads(messages: Messages) {
   const [photos, setPhotos] = useState<UploadedPhoto[]>([])
@@ -61,6 +64,7 @@ export function usePhotoUploads(messages: Messages) {
           urls.current.add(url)
           next.push({
             id: `${file.name}-${file.size}-${file.lastModified}-${next.length}`,
+            file,
             url,
             name: file.name,
             size: file.size,

@@ -1,6 +1,13 @@
 import { useMemo } from 'react'
-import type { Category } from '../data/types'
+import type { IconName } from '../data/types'
 import { Icon } from './Icon'
+
+/** Everything the artwork needs, shared by the API and static category shapes. */
+export interface ThumbCategory {
+  id: string
+  icon: IconName
+  hue: number
+}
 
 /**
  * Placeholder artwork. The POC ships no photography, so each listing gets a
@@ -16,7 +23,7 @@ function hash(input: string) {
 
 interface ThumbProps {
   seed: string
-  category: Category
+  category: ThumbCategory
   /** Extra variation index, used for the gallery on the ad page. */
   variant?: number
   className?: string

@@ -1,15 +1,20 @@
 import { Link } from 'react-router-dom'
-import { ads, adsByCategory, adsBySubCategory } from '../data/ads'
-import { categories, categoryById } from '../data/categories'
-import type { Ad } from '../data/types'
+import { useAds } from '../api/hooks'
+import { useCatalog } from '../api/CatalogContext'
+import type { AdQuery } from '../api/types'
 import { useLang } from '../i18n/LanguageContext'
 import { AdCard } from '../components/AdCard'
 import { Icon } from '../components/Icon'
 import { AdImage } from '../components/AdImage'
+import { CardSkeletons } from '../components/Skeleton'
 import type { TranslationKey } from '../i18n/translations'
 
 function Hero() {
   const { t, pick, formatPrice } = useLang()
+  const { byId } = useCatalog()
+  const { ads, loading } = useAds({ sort: 'recent', limit: 12 })
+  const { categories } = useCatalog()
+
   const spotlight = ads.filter((a) => a.featured).slice(0, 4)
 
   return (
@@ -54,23 +59,35 @@ function Hero() {
               <span>{t('hero.statSellers')}</span>
             </div>
             <div className="hero__stat">
-              <b>{categories.length}</b>
+              <b>{categories.length || '—'}</b>
               <span>{t('hero.statCategories')}</span>
             </div>
           </div>
         </div>
 
         <div className="hero__cards">
-          {spotlight.map((ad) => {
-            const category = categoryById(ad.categoryId)!
-            return (
-              <Link key={ad.id} to={`/ad/${ad.slug}`} className="hero__card">
-                <AdImage slug={ad.slug} category={category} alt={pick(ad).title} ratio={0.62} eager />
-                <strong>{pick(ad).title}</strong>
-                <span>{formatPrice(ad.priceGnf)}</span>
-              </Link>
-            )
-          })}
+          {loading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="hero__card hero__card--loading" aria-hidden="true" />
+              ))
+            : spotlight.map((ad) => {
+                const category = byId(ad.categoryId)
+                if (!category) return null
+                return (
+                  <Link key={ad.id} to={`/ad/${ad.slug}`} className="hero__card">
+                    <AdImage
+                      slug={ad.slug}
+                      category={category}
+                      photos={ad.photos}
+                      alt={pick(ad).title}
+                      ratio={0.62}
+                      eager
+                    />
+                    <strong>{pick(ad).title}</strong>
+                    <span>{formatPrice(ad.priceGnf)}</span>
+                  </Link>
+                )
+              })}
         </div>
       </div>
     </section>
@@ -79,6 +96,8 @@ function Hero() {
 
 function CategoryTiles() {
   const { t, pick } = useLang()
+  const { categories, loading } = useCatalog()
+
   return (
     <section className="section section--white" id="categories">
       <div className="container">
@@ -87,17 +106,21 @@ function CategoryTiles() {
           <p>{t('section.browseCategoriesSub')}</p>
         </div>
         <div className="cat-grid">
-          {categories.map((category) => (
-            <Link key={category.id} to={`/c/${category.slug}`} className="cat-tile">
-              <i>
-                <Icon name={category.icon} size={22} />
-              </i>
-              <b>{pick(category)}</b>
-              <span>
-                {adsByCategory(category.id).length} {t('section.adsCount')}
-              </span>
-            </Link>
-          ))}
+          {loading
+            ? Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="cat-tile cat-tile--loading" aria-hidden="true" />
+              ))
+            : categories.map((category) => (
+                <Link key={category.id} to={`/c/${category.slug}`} className="cat-tile">
+                  <i>
+                    <Icon name={category.icon} size={22} />
+                  </i>
+                  <b>{pick(category)}</b>
+                  <span>
+                    {category.adCount} {t('section.adsCount')}
+                  </span>
+                </Link>
+              ))}
         </div>
       </div>
     </section>
@@ -164,9 +187,13 @@ function HowItWorks() {
   )
 }
 
-function AdSection({ title, to, items }: { title: string; to: string; items: Ad[] }) {
+/** Each row asks the API for just the four listings it shows. */
+function AdSection({ title, to, query }: { title: string; to: string; query: AdQuery }) {
   const { t } = useLang()
-  if (items.length === 0) return null
+  const { ads, loading, error } = useAds({ ...query, limit: 4 })
+
+  if (!loading && (error || ads.length === 0)) return null
+
   return (
     <section className="section section--tight">
       <div className="container">
@@ -176,11 +203,15 @@ function AdSection({ title, to, items }: { title: string; to: string; items: Ad[
             {t('section.viewAll')}
           </Link>
         </div>
-        <div className="grid">
-          {items.slice(0, 4).map((ad) => (
-            <AdCard key={ad.id} ad={ad} />
-          ))}
-        </div>
+        {loading ? (
+          <CardSkeletons count={4} />
+        ) : (
+          <div className="grid">
+            {ads.map((ad) => (
+              <AdCard key={ad.id} ad={ad} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   )
@@ -216,22 +247,22 @@ export function Home() {
       <AdSection
         title={t('section.carsForSale')}
         to="/c/vehicules?sub=cars-for-sale"
-        items={adsBySubCategory('cars-for-sale')}
+        query={{ sub: 'cars-for-sale' }}
       />
       <AdSection
         title={t('section.properties')}
         to="/c/immobilier"
-        items={adsByCategory('real-estate')}
+        query={{ category: 'real-estate' }}
       />
       <AdSection
         title={t('section.mobilePhones')}
         to="/c/electronique?sub=mobile-phones"
-        items={adsBySubCategory('mobile-phones')}
+        query={{ sub: 'mobile-phones' }}
       />
       <AdSection
         title={t('section.laptops')}
         to="/c/electronique?sub=laptops"
-        items={adsBySubCategory('laptops')}
+        query={{ sub: 'laptops' }}
       />
 
       <CtaBand />

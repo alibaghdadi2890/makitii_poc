@@ -1,17 +1,14 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { adBySlug, ads } from '../data/ads'
-import { categoryById, subCategoryById } from '../data/categories'
+import { useAd, useAds } from '../api/hooks'
+import { useCatalog } from '../api/CatalogContext'
 import { useLang } from '../i18n/LanguageContext'
 import { AdCard } from '../components/AdCard'
 import { Icon } from '../components/Icon'
-import { AdImage, photoCount } from '../components/AdImage'
-import { creditsFor } from '../data/photos'
+import { AdImage } from '../components/AdImage'
+import { CardSkeletons } from '../components/Skeleton'
 import { useFavorites } from '../hooks/useFavorites'
-import { useRecentlyViewed } from '../hooks/useRecentlyViewed'
 import { useToast } from '../components/Toast'
-
-const FALLBACK_GALLERY = 4
 
 /** Stable numeric reference derived from the slug, so it reads like a real ID. */
 function reference(slug: string) {
@@ -24,14 +21,37 @@ export function AdDetail() {
   const { slug } = useParams()
   const { t, pick, formatPrice, formatDate } = useLang()
   const { isFavorite, toggle } = useFavorites()
+  const { byId, subById } = useCatalog()
   const toast = useToast()
   const [variant, setVariant] = useState(0)
   const [phoneShown, setPhoneShown] = useState(false)
 
-  const ad = adBySlug(slug ?? '')
-  const recentIds = useRecentlyViewed(ad?.id)
+  const { ad, loading, error } = useAd(slug)
 
-  if (!ad) {
+  // Similar listings come from the same subcategory, resolved once the ad loads.
+  const { ads: similar } = useAds(
+    ad ? { sub: ad.subCategoryId ?? undefined, category: ad.categoryId, limit: 4 } : {},
+  )
+
+  if (loading) {
+    return (
+      <div className="page">
+        <div className="container">
+          <div className="ad-layout">
+            <div className="panel">
+              <div className="skeleton__media" style={{ borderRadius: 8 }} />
+            </div>
+            <div className="panel">
+              <div className="skeleton__line" />
+              <div className="skeleton__line skeleton__line--short" />
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !ad) {
     return (
       <div className="page">
         <div className="container">
@@ -50,23 +70,13 @@ export function AdDetail() {
     )
   }
 
-  const category = categoryById(ad.categoryId)!
-  const sub = subCategoryById(ad.categoryId, ad.subCategoryId)
+  const category = byId(ad.categoryId)
+  const sub = subById(ad.categoryId, ad.subCategoryId)
   const copy = pick(ad)
   const saved = isFavorite(ad.id)
 
-  const similar = ads
-    .filter((a) => a.id !== ad.id && (a.subCategoryId === ad.subCategoryId || a.categoryId === ad.categoryId))
-    .slice(0, 3)
-
-  const recent = recentIds
-    .map((id) => ads.find((a) => a.id === id))
-    .filter((a): a is NonNullable<typeof a> => Boolean(a))
-    .slice(0, 4)
-
-  const credits = creditsFor(ad.slug)
-  const credit = credits[variant % (credits.length || 1)]
-  const galleryLength = photoCount(ad.slug) || FALLBACK_GALLERY
+  const galleryLength = Math.max(ad.photos.length, 1)
+  const credit = ad.photos[variant % galleryLength]?.credit ?? null
   const step = (delta: number) =>
     setVariant((v) => (v + delta + galleryLength) % galleryLength)
 
@@ -75,14 +85,16 @@ export function AdDetail() {
     toast(saved ? t('toast.removed') : t('toast.saved'))
   }
 
+  const others = similar.filter((a) => a.id !== ad.id).slice(0, 3)
+
   return (
     <div className="page">
       <div className="container">
         <nav className="breadcrumb" aria-label="Breadcrumb">
           <Link to="/">{t('common.breadcrumbHome')}</Link>
           <Icon name="chevron" size={13} />
-          <Link to={`/c/${category.slug}`}>{pick(category)}</Link>
-          {sub && (
+          {category && <Link to={`/c/${category.slug}`}>{pick(category)}</Link>}
+          {category && sub && (
             <>
               <Icon name="chevron" size={13} />
               <Link to={`/c/${category.slug}?sub=${sub.id}`}>{pick(sub)}</Link>
@@ -94,41 +106,55 @@ export function AdDetail() {
           <div>
             <div className="panel" style={{ marginBottom: 22 }}>
               <div className="gallery__main" style={{ position: 'relative' }}>
-                <AdImage
-                  slug={ad.slug}
-                  category={category}
-                  alt={copy.title}
-                  index={variant}
-                  ratio={0.6}
-                  eager
-                />
-                <div className="ad-gallery__nav">
-                  <button type="button" aria-label={t('ad.previousImage')} onClick={() => step(-1)}>
-                    <Icon name="arrow" size={17} />
-                  </button>
-                  <button type="button" aria-label={t('ad.nextImage')} onClick={() => step(1)}>
-                    <Icon name="arrow" size={17} />
-                  </button>
-                </div>
+                {category && (
+                  <AdImage
+                    slug={ad.slug}
+                    category={category}
+                    photos={ad.photos}
+                    alt={copy.title}
+                    index={variant}
+                    ratio={0.6}
+                    eager
+                  />
+                )}
+                {ad.photos.length > 1 && (
+                  <div className="ad-gallery__nav">
+                    <button type="button" aria-label={t('ad.previousImage')} onClick={() => step(-1)}>
+                      <Icon name="arrow" size={17} />
+                    </button>
+                    <button type="button" aria-label={t('ad.nextImage')} onClick={() => step(1)}>
+                      <Icon name="arrow" size={17} />
+                    </button>
+                  </div>
+                )}
               </div>
 
-              <div className="gallery__thumbs">
-                {Array.from({ length: galleryLength }).map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    aria-current={variant === i}
-                    aria-label={`${copy.title} — ${i + 1}/${galleryLength}`}
-                    onClick={() => setVariant(i)}
-                  >
-                    <AdImage slug={ad.slug} category={category} alt={copy.title} index={i} ratio={0.72} />
-                  </button>
-                ))}
-              </div>
+              {ad.photos.length > 1 && category && (
+                <div className="gallery__thumbs">
+                  {ad.photos.map((photo, i) => (
+                    <button
+                      key={photo.id}
+                      type="button"
+                      aria-current={variant === i}
+                      aria-label={`${copy.title} — ${i + 1}/${ad.photos.length}`}
+                      onClick={() => setVariant(i)}
+                    >
+                      <AdImage
+                        slug={ad.slug}
+                        category={category}
+                        photos={ad.photos}
+                        alt={copy.title}
+                        index={i}
+                        ratio={0.72}
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {credit && (
                 <p className="photo-credit">
-                  {t('ad.photoCredit')}: {credit.title ?? credit.file} — {t('credits.by')}{' '}
+                  {t('ad.photoCredit')}: {credit.title ?? '—'} — {t('credits.by')}{' '}
                   {credit.creator ?? t('credits.unknownAuthor')} ({credit.license.toUpperCase()}) ·{' '}
                   <a href={credit.source} target="_blank" rel="noreferrer noopener">
                     {t('credits.source')}
@@ -161,9 +187,9 @@ export function AdDetail() {
               </div>
 
               <h2 style={{ fontSize: 17, marginBottom: 10 }}>{t('ad.description')}</h2>
-              <p style={{ color: 'var(--ink-soft)' }}>{copy.description}</p>
+              <p style={{ color: 'var(--ink-soft)', whiteSpace: 'pre-line' }}>{copy.description}</p>
 
-              {ad.attributes.length > 0 && (
+              {ad.attributes && ad.attributes.length > 0 && (
                 <>
                   <h2 style={{ fontSize: 17, margin: '22px 0 12px' }}>{t('ad.details')}</h2>
                   <dl className="attr-table">
@@ -199,42 +225,48 @@ export function AdDetail() {
           </div>
 
           <aside>
-            <div className="panel seller" style={{ marginBottom: 18 }}>
-              <div className="seller__avatar" aria-hidden="true">
-                {ad.seller.name
-                  .split(' ')
-                  .map((p) => p[0])
-                  .join('')}
+            {ad.seller && (
+              <div className="panel seller" style={{ marginBottom: 18 }}>
+                <div className="seller__avatar" aria-hidden="true">
+                  {ad.seller.name
+                    .split(' ')
+                    .map((p) => p[0])
+                    .join('')}
+                </div>
+                <h3>{ad.seller.name}</h3>
+                <p>
+                  {ad.seller.verified ? (
+                    <span className="pill">
+                      <Icon name="shield" size={13} />
+                      {t('ad.verified')}
+                    </span>
+                  ) : (
+                    t('ad.unverified')
+                  )}
+                  {ad.seller.memberSince && (
+                    <>
+                      <br />
+                      {t('ad.memberSince')} {formatDate(ad.seller.memberSince)}
+                    </>
+                  )}
+                </p>
+
+                <button
+                  type="button"
+                  className="btn btn--green btn--block"
+                  onClick={() => setPhoneShown(true)}
+                >
+                  <Icon name="phoneCall" size={16} />
+                  {phoneShown && ad.seller.phone ? `+224 ${ad.seller.phone}` : t('ad.showPhone')}
+                </button>
+                <button type="button" className="btn btn--outline btn--block">
+                  <Icon name="message" size={16} />
+                  {t('ad.message')}
+                </button>
+
+                <div className="demo-note">{t('ad.demoNotice')}</div>
               </div>
-              <h3>{ad.seller.name}</h3>
-              <p>
-                {ad.seller.verified ? (
-                  <span className="pill">
-                    <Icon name="shield" size={13} />
-                    {t('ad.verified')}
-                  </span>
-                ) : (
-                  t('ad.unverified')
-                )}
-                <br />
-                {t('ad.memberSince')} {formatDate(ad.seller.memberSince)}
-              </p>
-
-              <button
-                type="button"
-                className="btn btn--green btn--block"
-                onClick={() => setPhoneShown(true)}
-              >
-                <Icon name="phoneCall" size={16} />
-                {phoneShown ? ad.seller.phone : t('ad.showPhone')}
-              </button>
-              <button type="button" className="btn btn--outline btn--block">
-                <Icon name="message" size={16} />
-                {t('ad.message')}
-              </button>
-
-              <div className="demo-note">{t('ad.demoNotice')}</div>
-            </div>
+            )}
 
             <div className="notice">
               <Icon name="shield" size={20} />
@@ -246,34 +278,25 @@ export function AdDetail() {
           </aside>
         </div>
 
-        {similar.length > 0 && (
-          <section style={{ marginTop: 44 }}>
-            <div className="section__head">
-              <h2 style={{ fontSize: 20 }}>{t('ad.similar')}</h2>
+        <section style={{ marginTop: 44 }}>
+          <div className="section__head">
+            <h2 style={{ fontSize: 20 }}>{t('ad.similar')}</h2>
+            {category && (
               <Link to={`/c/${category.slug}`} className="btn btn--outline">
                 {t('section.viewAll')}
               </Link>
-            </div>
+            )}
+          </div>
+          {others.length > 0 ? (
             <div className="grid grid--3">
-              {similar.map((item) => (
+              {others.map((item) => (
                 <AdCard key={item.id} ad={item} />
               ))}
             </div>
-          </section>
-        )}
-
-        {recent.length > 0 && (
-          <section style={{ marginTop: 44 }}>
-            <div className="section__head">
-              <h2 style={{ fontSize: 20 }}>{t('ad.recentlyViewed')}</h2>
-            </div>
-            <div className="grid">
-              {recent.map((item) => (
-                <AdCard key={item.id} ad={item} />
-              ))}
-            </div>
-          </section>
-        )}
+          ) : (
+            <CardSkeletons count={3} columns={3} />
+          )}
+        </section>
       </div>
     </div>
   )

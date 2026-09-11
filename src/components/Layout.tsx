@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { categories } from '../data/categories'
-import { ads } from '../data/ads'
+import { useCatalog } from '../api/CatalogContext'
+import { useAuth } from '../auth/AuthContext'
 import { useLang } from '../i18n/LanguageContext'
 import { useFavorites } from '../hooks/useFavorites'
 import { Icon } from './Icon'
@@ -45,6 +45,8 @@ function useSearchSubmit() {
 function TopBar() {
   const { t, pick } = useLang()
   const { ids } = useFavorites()
+  const { categories } = useCatalog()
+  const { user, signOut } = useAuth()
   const submitSearch = useSearchSubmit()
   const [query, setQuery] = useState('')
   const [cat, setCat] = useState('')
@@ -99,12 +101,27 @@ function TopBar() {
             {ids.length > 0 && <span className="fav-link__count">{ids.length}</span>}
           </Link>
           <span className="topbar__divider" />
-          <Link to="/login">
-            <Icon name="user" size={16} />
-            {t('topbar.signIn')}
-          </Link>
-          <span className="topbar__divider" />
-          <Link to="/register">{t('topbar.register')}</Link>
+          {user ? (
+            <>
+              <Link to="/my-ads">
+                <Icon name="user" size={16} />
+                {user.fullName.split(' ')[0]}
+              </Link>
+              <span className="topbar__divider" />
+              <button type="button" className="topbar__signout" onClick={() => void signOut()}>
+                {t('account.signOut')}
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login">
+                <Icon name="user" size={16} />
+                {t('topbar.signIn')}
+              </Link>
+              <span className="topbar__divider" />
+              <Link to="/register">{t('topbar.register')}</Link>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -113,6 +130,7 @@ function TopBar() {
 
 function MegaMenu({ onNavigate }: { onNavigate: () => void }) {
   const { pick } = useLang()
+  const { categories } = useCatalog()
   return (
     <div className="mega">
       {categories.map((category) => (
@@ -140,6 +158,7 @@ function MegaMenu({ onNavigate }: { onNavigate: () => void }) {
 
 function Drawer({ onClose }: { onClose: () => void }) {
   const { t, pick } = useLang()
+  const { categories } = useCatalog()
   const panel = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -214,6 +233,7 @@ function Drawer({ onClose }: { onClose: () => void }) {
 
 function Header() {
   const { t, pick } = useLang()
+  const { categories } = useCatalog()
   const [megaOpen, setMegaOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [stuck, setStuck] = useState(false)
@@ -327,6 +347,7 @@ function Header() {
 
 function Footer() {
   const { t, pick } = useLang()
+  const { categories } = useCatalog()
   const quickLinks: [string, string][] = [
     ['/about', t('footer.aboutUs')],
     ['/post', t('footer.postAd')],
@@ -426,8 +447,7 @@ function Footer() {
 
       <div className="footer__bottom">
         <div className="container">
-          © {new Date().getFullYear()} <span>Makitii</span> — {t('footer.rights')} {t('footer.demoBadge')}{' '}
-          {ads.length} {t('section.adsCount')}.
+          © {new Date().getFullYear()} <span>Makitii</span> — {t('footer.rights')} {t('footer.demoBadge')}
         </div>
       </div>
     </footer>

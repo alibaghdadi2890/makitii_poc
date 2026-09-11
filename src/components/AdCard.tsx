@@ -1,18 +1,20 @@
 import { Link } from 'react-router-dom'
-import type { Ad } from '../data/types'
-import { categoryById, subCategoryById } from '../data/categories'
+import type { ApiAd } from '../api/types'
+import { useCatalog } from '../api/CatalogContext'
 import { useLang } from '../i18n/LanguageContext'
 import { useFavorites } from '../hooks/useFavorites'
 import { useToast } from './Toast'
 import { Icon } from './Icon'
 import { AdImage } from './AdImage'
 
-export function AdCard({ ad }: { ad: Ad }) {
+export function AdCard({ ad }: { ad: ApiAd }) {
   const { t, pick, formatPrice, formatDate } = useLang()
   const { isFavorite, toggle } = useFavorites()
+  const { byId, subById } = useCatalog()
   const toast = useToast()
-  const category = categoryById(ad.categoryId)
-  const sub = subCategoryById(ad.categoryId, ad.subCategoryId)
+
+  const category = byId(ad.categoryId)
+  const sub = subById(ad.categoryId, ad.subCategoryId)
   if (!category) return null
 
   const saved = isFavorite(ad.id)
@@ -25,17 +27,20 @@ export function AdCard({ ad }: { ad: Ad }) {
   return (
     <article className="card">
       <div className="card__media">
-        <AdImage slug={ad.slug} category={category} alt={pick(ad).title} />
+        <AdImage
+          slug={ad.slug}
+          category={category}
+          photos={ad.photos}
+          alt={pick(ad).title}
+        />
 
         {ad.featured && <span className="card__badge">{t('card.featured')}</span>}
 
-        {ad.condition !== 'used' && (
-          <div className="card__tags">
-            <span className={`tag-chip ${ad.condition === 'new' ? 'tag-chip--new' : ''}`}>
-              {t(`condition.${ad.condition}`)}
-            </span>
-          </div>
-        )}
+        <div className="card__tags">
+          <span className={`tag-chip ${ad.condition === 'new' ? 'tag-chip--new' : ''}`}>
+            {t(`condition.${ad.condition}`)}
+          </span>
+        </div>
 
         <button
           type="button"

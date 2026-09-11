@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import type { Category } from '../data/types'
-import { photosFor } from '../data/photos'
+import type { ApiPhoto } from '../api/types'
 import { Thumb } from './Thumb'
+import type { ThumbCategory } from './Thumb'
 
 interface AdImageProps {
   slug: string
-  category: Category
+  category: ThumbCategory
+  photos: ApiPhoto[]
   alt: string
   /** Which photo to show — wraps around, so galleries can index freely. */
   index?: number
@@ -22,6 +23,7 @@ interface AdImageProps {
 export function AdImage({
   slug,
   category,
+  photos,
   alt,
   index = 0,
   ratio = 0.72,
@@ -30,9 +32,8 @@ export function AdImage({
 }: AdImageProps) {
   const [loaded, setLoaded] = useState(false)
   const [failed, setFailed] = useState(false)
-  const sources = photosFor(slug)
 
-  if (failed || sources.length === 0) {
+  if (failed || photos.length === 0) {
     return <Thumb seed={slug} category={category} variant={index} ratio={ratio} className={className} />
   }
 
@@ -41,7 +42,7 @@ export function AdImage({
       <Thumb seed={slug} category={category} variant={index} ratio={ratio} className="thumb__under" />
       <img
         className={`thumb__photo ${loaded ? 'is-loaded' : ''}`}
-        src={sources[index % sources.length]}
+        src={photos[index % photos.length].url}
         alt={alt}
         loading={eager ? 'eager' : 'lazy'}
         decoding="async"
@@ -51,6 +52,3 @@ export function AdImage({
     </div>
   )
 }
-
-/** How many distinct photos a listing has, for gallery controls. */
-export const photoCount = (slug: string) => photosFor(slug).length

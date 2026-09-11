@@ -774,3 +774,73 @@ h3 {
     grid-template-columns: 1fr;
   }
 }
+
+/* ------------------------------------------------- backend-era additions */
+
+.topbar__signout {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #e4e4e4;
+  font-size: 13.5px;
+}
+
+.topbar__signout:hover {
+  color: var(--yellow);
+}
+
+.otp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.otp-head strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.otp-input {
+  letter-spacing: 0.6em;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 600;
+  height: 56px !important;
+}
+
+.link-button {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--green);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.link-button:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.link-button--centred {
+  display: block;
+  margin: 14px auto 0;
+}
+
+/* Placeholders that keep the hero and category grid from collapsing while
+   their first request is still in flight. */
+.hero__card--loading {
+  min-height: 168px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.cat-tile--loading {
+  min-height: 116px;
+  background: var(--line-soft);
+  border-style: dashed;
+}

@@ -1,13 +1,18 @@
 import { Link } from 'react-router-dom'
-import { ads } from '../data/ads'
+import { useAds } from '../api/hooks'
 import { useLang } from '../i18n/LanguageContext'
 import { useFavorites } from '../hooks/useFavorites'
 import { AdCard } from '../components/AdCard'
+import { CardSkeletons } from '../components/Skeleton'
 import { Icon } from '../components/Icon'
 
 export function Favorites() {
   const { t } = useLang()
   const { ids } = useFavorites()
+  // Favourites are ids held on the device, so the listings themselves still
+  // have to come from the API; the catalogue is small enough to filter locally.
+  const { ads, loading } = useAds({ limit: 200 })
+
   const saved = ads.filter((ad) => ids.includes(ad.id))
 
   return (
@@ -26,7 +31,9 @@ export function Favorites() {
           </div>
         </div>
 
-        {saved.length > 0 ? (
+        {loading ? (
+          <CardSkeletons count={4} />
+        ) : saved.length > 0 ? (
           <div className="grid">
             {saved.map((ad) => (
               <AdCard key={ad.id} ad={ad} />
