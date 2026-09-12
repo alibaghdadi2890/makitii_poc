@@ -35,6 +35,14 @@ apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin do
 systemctl enable --now docker
 
 #--------------------------------------------------------------------
+# 1 GB swap: the nano bundle has 512 MB and sharp needs headroom on uploads.
+#--------------------------------------------------------------------
+if ! swapon --show | grep -q /swapfile; then
+  fallocate -l 1G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+  echo "/swapfile none swap sw 0 0" >> /etc/fstab
+fi
+
+#--------------------------------------------------------------------
 # `deploy` user: home dir, docker + sudo groups, SSH key, passwordless sudo.
 #--------------------------------------------------------------------
 if ! id -u deploy >/dev/null 2>&1; then
