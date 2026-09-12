@@ -326,37 +326,22 @@ ul {
   min-height: var(--header-h);
 }
 
+/* The brand lockup is a single image (bag mark + wordmark + tagline), so it is
+   sized by width and the intrinsic ratio keeps the height. */
 .logo {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  font-size: 27px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--ink);
+  flex: none;
 }
 
-.logo__mark {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 11px;
-  background: linear-gradient(140deg, var(--green) 0%, var(--yellow) 55%, var(--red) 100%);
-  color: #fff;
-  font-size: 22px;
-  font-weight: 700;
-  box-shadow: var(--shadow-sm);
+.logo img {
+  width: 168px;
+  height: auto;
+  transition: width 0.25s ease;
 }
 
-.logo__text i {
-  font-style: normal;
-  color: var(--green);
-}
-
-.logo--footer {
-  color: #fff;
-  font-size: 24px;
+.logo--footer img {
+  width: 176px;
 }
 
 .mainnav {

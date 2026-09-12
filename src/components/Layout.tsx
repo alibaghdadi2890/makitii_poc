@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import logoUrl from '../assets/logo-makitii.png'
 import { useCatalog } from '../api/CatalogContext'
 import { useAuth } from '../auth/AuthContext'
 import { useLang } from '../i18n/LanguageContext'
@@ -9,10 +10,7 @@ import { Icon } from './Icon'
 function Logo({ variant }: { variant?: 'footer' }) {
   return (
     <Link to="/" className={`logo ${variant === 'footer' ? 'logo--footer' : ''}`} aria-label="Makitii">
-      <span className="logo__mark">M</span>
-      <span className="logo__text">
-        Mak<i>i</i>tii
-      </span>
+      <img src={logoUrl} alt="Makitii" width={400} height={160} />
     </Link>
   )
 }

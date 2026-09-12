@@ -59,14 +59,8 @@ h3 {
   min-height: 68px;
 }
 
-.header.is-stuck .logo {
-  font-size: 23px;
-}
-
-.header.is-stuck .logo__mark {
-  width: 36px;
-  height: 36px;
-  font-size: 19px;
+.header.is-stuck .logo img {
+  width: 132px;
 }
 
 /* The compact search only appears once the top bar has scrolled away. */
@@ -843,4 +837,18 @@ h3 {
   min-height: 116px;
   background: var(--line-soft);
   border-style: dashed;
+}
+
+
+/* The lockup is wider than the old text mark, so the mobile drawer header and
+   narrow viewports get a smaller one to keep the nav row on one line. */
+@media (max-width: 640px) {
+  .logo img,
+  .logo--footer img {
+    width: 140px;
+  }
+}
+
+.drawer__head .logo img {
+  width: 132px;
 }
