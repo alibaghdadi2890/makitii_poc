@@ -3,7 +3,7 @@ import { readFileSync, mkdirSync } from 'node:fs'
 import path from 'node:path'
 
 export const SERVER_ROOT = path.resolve(import.meta.dirname, '..')
-export const UPLOAD_DIR = path.join(SERVER_ROOT, 'uploads')
+export const UPLOAD_DIR = process.env.MAKITII_UPLOADS ?? path.join(SERVER_ROOT, 'uploads')
 const DB_PATH = process.env.MAKITII_DB ?? path.join(SERVER_ROOT, 'makitii.db')
 
 mkdirSync(UPLOAD_DIR, { recursive: true })

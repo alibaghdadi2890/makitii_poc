@@ -1,0 +1,27 @@
+name: makitii
+
+# Caddy terminates TLS on :443 (automatic Let's Encrypt once DNS points here) and
+# proxies to the app. Until the domain resolves, SITE_ADDRESS=:80 serves plain HTTP.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - /var/lib/makitii/caddy:/data
+    depends_on:
+      - app
+
+  app:
+    image: ghcr.io/${GHCR_OWNER}/makitii-poc:${VERSION:-latest}
+    restart: unless-stopped
+    expose:
+      - "3001"
+    volumes:
+      - /var/lib/makitii/data:/data

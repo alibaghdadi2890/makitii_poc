@@ -1,4 +1,6 @@
 import express from 'express'
+import { existsSync } from 'node:fs'
+import path from 'node:path'
 import { attachUser } from './auth.js'
 import { UPLOAD_DIR, db, dbPath } from './db.js'
 import { authRoutes } from './routes/auth.js'
@@ -34,6 +36,15 @@ app.use('/api/categories', categoryRoutes)
 app.use('/api/ads', adRoutes)
 
 app.use('/api', (_req, res) => res.status(404).json({ error: 'not_found' }))
+
+// In production the built front end (dist/) is served from this same process,
+// so the container is one origin for the SPA, the API and the uploads.
+const DIST_DIR = path.resolve(import.meta.dirname, '..', '..', 'dist')
+if (existsSync(DIST_DIR)) {
+  app.use(express.static(DIST_DIR, { maxAge: '1h', index: false }))
+  app.use('/assets', express.static(path.join(DIST_DIR, 'assets'), { maxAge: '1y', immutable: true }))
+  app.get(/^(?!\/api|\/uploads).*/, (_req, res) => res.sendFile(path.join(DIST_DIR, 'index.html')))
+}
 
 // eslint-disable-next-line no-unused-vars -- Express identifies error handlers by arity
 app.use((err, _req, res, _next) => {
