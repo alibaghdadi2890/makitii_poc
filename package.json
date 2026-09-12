@@ -10,7 +10,8 @@
     "seed": "node --no-warnings server/src/seed.js",
     "seed:reset": "node --no-warnings server/src/seed.js --reset",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "audit:responsive": "node scripts/responsive-audit.mjs"
   },
   "dependencies": {
     "express": "^5.2.1",
@@ -25,6 +26,7 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.2",
     "concurrently": "^10.0.5",
+    "playwright-core": "^1.63.0",
     "typescript": "^5.6.2",
     "vite": "^5.4.9"
   }

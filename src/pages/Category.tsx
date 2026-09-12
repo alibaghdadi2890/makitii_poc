@@ -29,6 +29,11 @@ export function Category({ mode = 'category' }: { mode?: 'category' | 'search' }
   const maxPrice = params.get('max') ?? ''
   const sort = params.get('sort') ?? 'recent'
 
+  // Below 1100px the filter rail stacks above the results, so it starts
+  // collapsed: otherwise a phone shows a screen and a half of form controls
+  // before the first listing.
+  const [filtersOpen, setFiltersOpen] = useState(false)
+
   // Keyword input is local so typing stays responsive; the URL catches up.
   const [keyword, setKeyword] = useState(queryText)
   useEffect(() => setKeyword(queryText), [queryText])
@@ -102,9 +107,22 @@ export function Category({ mode = 'category' }: { mode?: 'category' | 'search' }
         </div>
 
         <div className="layout-2col">
-          <aside className="panel panel--filters" aria-label={t('category.filters')}>
-            <h3>{t('category.filters')}</h3>
+          <aside
+            className={`panel panel--filters ${filtersOpen ? 'is-open' : ''}`}
+            aria-label={t('category.filters')}
+          >
+            <button
+              type="button"
+              className="filters-toggle"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen((v) => !v)}
+            >
+              <h3>{t('category.filters')}</h3>
+              {activeChips.length > 0 && <span className="filters-toggle__count">{activeChips.length}</span>}
+              <Icon name="chevron" size={16} className="filters-toggle__chevron" />
+            </button>
 
+            <div className="filters-body">
             <div className="field">
               <label htmlFor="f-q">{t('category.keyword')}</label>
               <input
@@ -167,6 +185,7 @@ export function Category({ mode = 'category' }: { mode?: 'category' | 'search' }
             <button type="button" className="btn btn--outline btn--block" onClick={reset}>
               {t('category.reset')}
             </button>
+            </div>
           </aside>
 
           <div>

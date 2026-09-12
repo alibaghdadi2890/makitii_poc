@@ -93,17 +93,17 @@ function TopBar() {
         <div className="topbar__auth">
           <LanguageToggle />
           <span className="topbar__divider" />
-          <Link to="/favorites" className="fav-link">
+          <Link to="/favorites" className="fav-link" aria-label={t('nav.favorites')}>
             <Icon name="heart" size={16} />
-            {t('nav.favorites')}
+            <span className="fav-label">{t('nav.favorites')}</span>
             {ids.length > 0 && <span className="fav-link__count">{ids.length}</span>}
           </Link>
           <span className="topbar__divider" />
           {user ? (
             <>
-              <Link to="/my-ads">
+              <Link to="/my-ads" aria-label={t('account.myAds')}>
                 <Icon name="user" size={16} />
-                {user.fullName.split(' ')[0]}
+                <span className="account-label">{user.fullName.split(' ')[0]}</span>
               </Link>
               <span className="topbar__divider" />
               <button type="button" className="topbar__signout" onClick={() => void signOut()}>
@@ -112,9 +112,9 @@ function TopBar() {
             </>
           ) : (
             <>
-              <Link to="/login">
+              <Link to="/login" aria-label={t('topbar.signIn')}>
                 <Icon name="user" size={16} />
-                {t('topbar.signIn')}
+                <span className="account-label">{t('topbar.signIn')}</span>
               </Link>
               <span className="topbar__divider" />
               <Link to="/register">{t('topbar.register')}</Link>
@@ -157,6 +157,9 @@ function MegaMenu({ onNavigate }: { onNavigate: () => void }) {
 function Drawer({ onClose }: { onClose: () => void }) {
   const { t, pick } = useLang()
   const { categories } = useCatalog()
+  const { user, signOut } = useAuth()
+  const submitSearch = useSearchSubmit()
+  const [drawerQuery, setDrawerQuery] = useState('')
   const panel = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -189,6 +192,25 @@ function Drawer({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
+        <form
+          className="drawer__search"
+          role="search"
+          onSubmit={(e) => {
+            e.preventDefault()
+            submitSearch(drawerQuery)
+            onClose()
+          }}
+        >
+          <Icon name="search" size={16} />
+          <input
+            type="search"
+            value={drawerQuery}
+            onChange={(e) => setDrawerQuery(e.target.value)}
+            placeholder={t('topbar.searchPlaceholder')}
+            aria-label={t('topbar.searchPlaceholder')}
+          />
+        </form>
+
         <div className="drawer__body">
           {categories.map((category) => (
             <details key={category.id} className="drawer__group">
@@ -220,9 +242,32 @@ function Drawer({ onClose }: { onClose: () => void }) {
             <Icon name="plus" size={16} />
             {t('nav.postAd')}
           </Link>
-          <Link to="/login" className="btn btn--outline btn--block" onClick={onClose}>
-            {t('topbar.signIn')}
-          </Link>
+          {user ? (
+            <>
+              <Link to="/my-ads" className="btn btn--outline btn--block" onClick={onClose}>
+                {t('account.myAds')}
+              </Link>
+              <button
+                type="button"
+                className="btn btn--outline btn--block"
+                onClick={() => {
+                  void signOut()
+                  onClose()
+                }}
+              >
+                {t('account.signOut')}
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="btn btn--outline btn--block" onClick={onClose}>
+                {t('topbar.signIn')}
+              </Link>
+              <Link to="/register" className="btn btn--outline btn--block" onClick={onClose}>
+                {t('topbar.register')}
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </>
@@ -321,9 +366,9 @@ function Header() {
           </form>
 
           <div className="header__actions">
-            <Link to="/post" className="btn btn--green">
+            <Link to="/post" className="btn btn--green btn--post" title={t('nav.postAd')}>
               <Icon name="plus" size={16} />
-              {t('nav.postAd')}
+              <span className="btn__label">{t('nav.postAd')}</span>
             </Link>
             <button
               type="button"

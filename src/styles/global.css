@@ -205,6 +205,9 @@ ul {
   align-items: center;
   gap: 20px;
   min-height: var(--topbar-h);
+  /* Without min-width:0 the flex children refuse to shrink below their
+     intrinsic width and push the whole page into horizontal scroll. */
+  min-width: 0;
 }
 
 .topbar__tagline {
@@ -223,6 +226,7 @@ ul {
   display: flex;
   margin-left: auto;
   gap: 10px;
+  min-width: 0;
 }
 
 .topbar__search input,
@@ -237,6 +241,7 @@ ul {
 
 .topbar__search input {
   width: 210px;
+  min-width: 0;
 }
 
 .topbar__search input::placeholder {
@@ -270,6 +275,8 @@ ul {
   align-items: center;
   gap: 14px;
   font-size: 13.5px;
+  min-width: 0;
+  flex: none;
 }
 
 .topbar__auth a {
@@ -1552,9 +1559,24 @@ ul {
 }
 
 @media (max-width: 900px) {
-  .topbar__search input,
-  .topbar__search select {
+  /* The whole search group goes, not just the fields: hiding the input while
+     leaving the button stranded a control that submitted an empty query.
+     Search moves into the drawer at this size. */
+  .topbar__search {
     display: none;
+  }
+
+  /* Sign-in, register and sign-out move into the drawer; the top bar keeps only
+     the language toggle and favourites, which have no other home. */
+  .topbar__auth .topbar__divider,
+  .topbar__auth a[href='/register'],
+  .topbar__auth .topbar__signout {
+    display: none;
+  }
+
+  .topbar__auth {
+    margin-left: auto;
+    gap: 10px;
   }
 
   .mainnav {
@@ -1596,6 +1618,11 @@ ul {
   }
 
   .topbar__tagline {
+    display: none;
+  }
+
+  .topbar__auth a .fav-label,
+  .topbar__auth a .account-label {
     display: none;
   }
 
